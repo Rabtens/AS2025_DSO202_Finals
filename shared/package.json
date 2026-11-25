@@ -1,0 +1,16 @@
+{
+  "name": "@hostel/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
+    "@opentelemetry/instrumentation-http": "^0.57.2",
+    "@opentelemetry/sdk-node": "^0.57.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "pino": "^9.6.0",
+    "prom-client": "^15.1.3"
+  }
+}

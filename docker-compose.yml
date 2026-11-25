@@ -1,0 +1,343 @@
+x-database: &database
+  PGHOST: postgres
+  PGDATABASE: hostel
+
+x-auth: &auth
+  JWT_SECRET: ${JWT_SECRET:-local-demo-jwt-secret-for-hostel-complaints}
+
+x-tracing: &tracing
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+
+x-postgres-dependency: &postgres-dependency
+  postgres:
+    condition: service_healthy
+
+services:
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: hostel
+      POSTGRES_USER: hostel_owner
+      POSTGRES_PASSWORD: hostel_owner_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/02-cronjobs.sql:/docker-entrypoint-initdb.d/02-cronjobs.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U hostel_owner -d hostel"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  frontend:
+    image: hostel-complaint-system-frontend:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    environment:
+      <<: *tracing
+      GATEWAY_URL: http://api-gateway:3000
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:3000"
+    healthcheck: &service-healthcheck
+      test: ["CMD", "wget", "-q", "-T", "3", "-O", "/dev/null", "http://127.0.0.1:3000/readyz"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
+  api-gateway:
+    image: hostel-complaint-system-api-gateway:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    environment:
+      <<: *tracing
+      LOGIN_URL: http://login:3000
+      REGISTER_URL: http://register:3000
+      USER_URL: http://user:3000
+      COMPLAINT_URL: http://complaint:3000
+      CATEGORY_URL: http://category:3000
+      HOSTEL_URL: http://hostel:3000
+      STAFF_URL: http://staff:3000
+      PRIORITY_URL: http://priority:3000
+      ASSIGNMENT_URL: http://assignment:3000
+      STATUS_URL: http://status:3000
+      NOTIFICATION_URL: http://notification:3000
+      FEEDBACK_URL: http://feedback:3000
+      ANNOUNCEMENT_URL: http://announcement:3000
+      REPORT_URL: http://report:3000
+    healthcheck: *service-healthcheck
+    depends_on:
+      login:
+        condition: service_healthy
+      register:
+        condition: service_healthy
+      user:
+        condition: service_healthy
+      complaint:
+        condition: service_healthy
+      category:
+        condition: service_healthy
+      hostel:
+        condition: service_healthy
+      staff:
+        condition: service_healthy
+      priority:
+        condition: service_healthy
+      assignment:
+        condition: service_healthy
+      status:
+        condition: service_healthy
+      notification:
+        condition: service_healthy
+      feedback:
+        condition: service_healthy
+      announcement:
+        condition: service_healthy
+      report:
+        condition: service_healthy
+
+  login:
+    image: hostel-complaint-system-login:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/login/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_login
+      PGPASSWORD: login_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  register:
+    image: hostel-complaint-system-register:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/register/Dockerfile
+    environment:
+      <<: [*database, *tracing]
+      PGUSER: svc_register
+      PGPASSWORD: register_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  user:
+    image: hostel-complaint-system-user:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/user/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_user
+      PGPASSWORD: user_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  complaint:
+    image: hostel-complaint-system-complaint:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/complaint/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_complaint
+      PGPASSWORD: complaint_dev
+      USER_URL: http://user:3000
+    healthcheck: *service-healthcheck
+    depends_on:
+      <<: *postgres-dependency
+      user:
+        condition: service_healthy
+
+  category:
+    image: hostel-complaint-system-category:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/category/Dockerfile
+    environment:
+      <<: [*database, *tracing]
+      PGUSER: svc_category
+      PGPASSWORD: category_dev
+    ports:
+      - "127.0.0.1:3001:3000"
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  hostel:
+    image: hostel-complaint-system-hostel:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/hostel/Dockerfile
+    environment:
+      <<: [*database, *tracing]
+      PGUSER: svc_hostel
+      PGPASSWORD: hostel_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  staff:
+    image: hostel-complaint-system-staff:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/staff/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_staff
+      PGPASSWORD: staff_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  priority:
+    image: hostel-complaint-system-priority:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/priority/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_priority
+      PGPASSWORD: priority_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  assignment:
+    image: hostel-complaint-system-assignment:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/assignment/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_assignment
+      PGPASSWORD: assignment_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  status:
+    image: hostel-complaint-system-status:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/status/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_status
+      PGPASSWORD: status_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  notification:
+    image: hostel-complaint-system-notification:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_notification
+      PGPASSWORD: notification_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  feedback:
+    image: hostel-complaint-system-feedback:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/feedback/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_feedback
+      PGPASSWORD: feedback_dev
+      COMPLAINT_URL: http://complaint:3000
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  announcement:
+    image: hostel-complaint-system-announcement:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/announcement/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_announcement
+      PGPASSWORD: announcement_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  report:
+    image: hostel-complaint-system-report:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/report/Dockerfile
+    environment:
+      <<: [*database, *auth, *tracing]
+      PGUSER: svc_report
+      PGPASSWORD: report_dev
+    healthcheck: *service-healthcheck
+    depends_on: *postgres-dependency
+
+  escalate: &job
+    image: hostel-complaint-system/cronjobs:${IMAGE_TAG:-dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: cronjobs/Dockerfile
+    profiles: [jobs]
+    environment:
+      <<: *database
+      PGUSER: job_escalate
+      PGPASSWORD: escalate_dev
+      ESCALATION_HOURS: ${ESCALATION_HOURS:-24}
+    command: ["escalate.js"]
+    depends_on: *postgres-dependency
+
+  daily-report:
+    <<: *job
+    environment:
+      <<: *database
+      PGUSER: job_daily_report
+      PGPASSWORD: daily_report_dev
+      REPORT_TIME_ZONE: ${REPORT_TIME_ZONE:-Asia/Thimphu}
+    command: ["daily-report.js"]
+
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.23.0
+    profiles: [observability]
+    ports:
+      - "127.0.0.1:16686:16686"
+
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.16.0
+    profiles: [observability]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: mirror.gcr.io/grafana/grafana:12.3.0
+    profiles: [observability]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "127.0.0.1:3002:3000"
+
+volumes:
+  postgres_data:
+  grafana_data:

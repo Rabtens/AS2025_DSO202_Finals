@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hostel-escalate
+spec:
+  schedule: "*/30 * * * *"
+  timeZone: Asia/Thimphu
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: escalate
+              image: hostel-complaint-system/cronjobs:dev
+              imagePullPolicy: IfNotPresent
+              args: ["escalate.js"]
+              envFrom:
+                - secretRef:
+                    name: hostel-escalate-db
+              env:
+                - name: ESCALATION_HOURS
+                  value: "24"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hostel-daily-report
+spec:
+  schedule: "5 0 * * *"
+  timeZone: Asia/Thimphu
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: daily-report
+              image: hostel-complaint-system/cronjobs:dev
+              imagePullPolicy: IfNotPresent
+              args: ["daily-report.js"]
+              envFrom:
+                - secretRef:
+                    name: hostel-daily-report-db
+              env:
+                - name: REPORT_TIME_ZONE
+                  value: Asia/Thimphu

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152b3d">
+  <title>Hostel Complaints</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="masthead">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i></i></span>
+        <span>Hostel Complaints</span>
+      </div>
+      <button id="sign-out" class="secondary" hidden>Sign out</button>
+    </div>
+  </header>
+  <main>
+    <p id="message" role="status" aria-live="polite" hidden></p>
+    <section id="account" class="access" aria-labelledby="account-heading">
+      <div class="campus">
+        <div class="campus-copy">
+          <p class="eyebrow">Residence services</p>
+          <p class="campus-title">Hostel maintenance</p>
+          <p>Report an issue in your hostel and follow its progress.</p>
+        </div>
+      </div>
+      <div class="access-panel">
+        <div class="access-form">
+          <h1 id="account-heading">Sign in</h1>
+          <p id="account-description" class="muted">Use your hostel account to access the portal.</p>
+          <form id="login">
+            <label>Email address <input name="email" type="email" autocomplete="username" required></label>
+            <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+            <button>Sign in</button>
+          </form>
+          <form id="register" hidden>
+            <label>Name <input name="name" autocomplete="name" maxlength="120" required></label>
+            <label>Email address <input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+            <label>Password <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+            <label>Room ID <input name="roomId" type="number" min="1" max="2147483647" required></label>
+            <button>Create account</button>
+          </form>
+          <button id="switch-mode" class="text-button" aria-controls="login register">Create a student account</button>
+        </div>
+      </div>
+    </section>
+    <div id="dashboard" hidden>
+      <header class="dashboard-header">
+        <p class="eyebrow">Complaint dashboard</p>
+        <h1 id="dashboard-heading">Welcome</h1>
+        <p id="room" hidden></p>
+      </header>
+      <dl class="summary" aria-label="Complaint summary">
+        <div><dt>Total complaints</dt><dd id="total-count">0</dd></div>
+        <div><dt>Active</dt><dd id="active-count">0</dd></div>
+        <div><dt>Resolved or closed</dt><dd id="complete-count">0</dd></div>
+      </dl>
+      <div class="dashboard-grid">
+        <section class="panel" id="create-complaint" hidden>
+          <h2>New complaint</h2>
+          <form id="complaint">
+            <label>Category <select name="categoryId" required></select></label>
+            <label>Title <input name="title" maxlength="160" required></label>
+            <label>Description <textarea name="description" rows="4" maxlength="4000" required></textarea></label>
+            <button>Submit complaint</button>
+          </form>
+        </section>
+        <section class="panel activity">
+          <div class="section-heading">
+            <h2 id="complaints-heading">Complaints</h2>
+            <button id="refresh" class="secondary">Refresh</button>
+          </div>
+          <div id="empty" class="empty-state" hidden>
+            <span class="empty-icon" aria-hidden="true">−</span>
+            <p>No complaints yet</p>
+            <small>Submitted complaints will appear here.</small>
+          </div>
+          <ul id="complaints"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
